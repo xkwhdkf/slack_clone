@@ -7,46 +7,40 @@ import { Link, Redirect } from 'react-router-dom';
 import useSWR from 'swr';
 
 const LogIn = () => {
-  const [email, onChangeEmail] = useInput('');
-  const [nickname, onChangeNickname] = useInput('');
-  const [password, setPassword] = useState('');
-  const [passwordCheck, setPasswordCheck] = useState('');
-  const [mismatchError, setMismatchError] = useState(false);
-  const [signUpError, setSignUpError] = useState('')
-  const [signUpSuccess, setSignUpSuccess] = useState(false)
-
-  const onChangePassword = useCallback((e) => {
-    setPassword(e.target.value);
-    setMismatchError(e.target.value !== passwordCheck);
-  },[passwordCheck]);
-
-  const onChangePasswordCheck = useCallback((e) => {
-    setPasswordCheck(e.target.value);
-  },[]);
-
-  const onSubmit = useCallback((e) => {
-    e.preventDefault();
-    if (!mismatchError) {
-      console.log('서버로 회원가입하기');
-      setSignUpError('');
-      setSignUpSuccess(false);
+  const {data, error, revalidate, mutate} = useSWR('http://localhost:3095/api/users', fetcher);
+  const [logInError, setLoginError] = useState(false);
+  const [password, onChangePassword] = useInput('');
+  const [ email,onChangeEmail] = useInput('');
+  const onSubmit = useCallback(
+    (e) => {
+      e.preventDefault();
+      setLoginError(false);
       axios
-      .post('https://localhost:3095/api/users', {
-        email,
-        nickname,
-        password,
-      })  
-      .then((response) => {
-        console.log(response);
-        setSignUpSuccess(true);
-      })
-      .catch((error) => {
-        console.log(error.response);
-        setSignUpError(error.response.data);
-      })
-      .finally(() => {})
-    }
-  },[email, nickname, password, passwordCheck, mismatchError]);
+        .post(
+          '/api/users/login',
+          { email, password },
+          {
+            withCredentials: true,
+          },
+        )
+        .then((response) => {
+          revalidate();
+        })
+        .catch((error) => {
+          setLoginError(error.response?.status === 401);
+        });
+    },
+    [email, password],
+  );
+  
+  if (data === undefined) {
+    return <div>로딩중...</div>;
+  }
+
+  if (data) {
+    return <Redirect to="/workspace/sleact/channel/일반" />;
+  }
+  
   // console.log(error, userData);
   // if (!error && userData) {
   //   console.log('로그인됨', userData);
